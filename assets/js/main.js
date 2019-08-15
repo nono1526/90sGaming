@@ -6,6 +6,9 @@ let street
 let player
 let cursors
 let enemies = []
+let group
+let isPlaying = true
+const ENEMY_LIST = ['tree', 'monster']
 const level1 = {
   preload () {
     this.load.image('sky', `${BACKGROUND_PATH}L1_sky.png`)
@@ -16,7 +19,8 @@ const level1 = {
       frameWidth: 590,
       frameHeight: 780
     })
-    this.load.image('lv1Enemy', `${BACKGROUND_PATH}L1_block_1.png`)
+    this.load.image('tree', `${BACKGROUND_PATH}L1_block_1.png`)
+    this.load.image('monster', `${BACKGROUND_PATH}L1_block_2.png`)
   },
   create () {
     this.add.image(600, 129, 'sky')
@@ -26,11 +30,9 @@ const level1 = {
     player = this.physics.add.sprite(100, 500, 'player', 0)
     
     
-    for (let i = 0; i < 2; i++) {
-      let y = Phaser.Math.Between(300, 500)
-      let enemy = this.physics.add.sprite(1200, y, 'lv1Enemy', 0)
-      enemies.push(enemy)
-    }
+
+
+
     this.physics.world.setBounds(0, 250, 1200, 430)
     this.anims.create({
       key: 'walk',
@@ -40,14 +42,38 @@ const level1 = {
     })
 
     player.setCollideWorldBounds(true)
-    player.play('walk').setScale(0.3).setSize(400, 120).setOffset(130,620)
+    player.setDepth(1)
+    player.play('walk').setScale(0.3).setSize(400, 120).setOffset(130, 620)
+    // create block group
+    group = this.add.group({ maxSize: 10 })
+    group.setDepth(1)
 
     cursors = this.input.keyboard.createCursorKeys()
-  },
-  update () {
-    enemies.forEach(enemy => {
-      enemy.setVelocityX(-200)
+
+    this.physics.add.overlap(player, group, () => {
+      isPlaying = false
     })
+  },
+  createBlock (block) {
+    Phaser.Geom.Rectangle.Random(this.physics.world.bounds, block)
+    block.setVelocityX(-200)
+  },
+  update (time, delta) {
+    if (!isPlaying) return
+    if (Phaser.Math.Between(1, 1000) < 20 && group.getChildren().length < 10) {
+      
+      let y = Phaser.Math.Between(300, 700)
+      group.add(this.physics.add.sprite(1200, y, ENEMY_LIST[Phaser.Math.Between(0, 1)], 0))
+    }
+    group.getChildren().forEach((enemy) => {
+      enemy.setVelocityX(-200)
+      if (enemy.x < -100) {
+        console.log(enemy + '881')
+        enemy.destroy()
+      }
+    })
+
+
     packMt.tilePositionX += 4
     mainMt.tilePositionX += 8
     street.tilePositionX += 10
