@@ -1,15 +1,20 @@
 const BACKGROUND_PATH = './assets/img/background/'
 const PLAYER_PATH = './assets/img/protagonist/'
-let mainMt
-let packMt
-let street
-let player
-let cursors
-let enemies = []
-let group
-let isPlaying = true
+
 const ENEMY_LIST = ['tree', 'monster']
-const level1 = {
+class Level1 extends Phaser.Scene {
+  constructor () {
+    super('Level1')
+    this.mainMt
+    this.packMt
+    this.street
+    this.player
+    this.cursors
+    this.enemies = []
+    this.group
+    this.isPlaying = true
+    this.timer
+  }
   preload () {
     this.load.image('sky', `${BACKGROUND_PATH}L1_sky.png`)
     this.load.image('lv1MainMt', `${BACKGROUND_PATH}L1_mountain_main.png`)
@@ -21,18 +26,14 @@ const level1 = {
     })
     this.load.image('tree', `${BACKGROUND_PATH}L1_block_1.png`)
     this.load.image('monster', `${BACKGROUND_PATH}L1_block_2.png`)
-  },
+  }
   create () {
     this.add.image(600, 129, 'sky')
-    street = this.add.tileSprite(600, 529, 1200, 543, 'lv1Street')
-    packMt = this.add.tileSprite(600, 129, 1200, 258, 'lv1PackMt')
-    mainMt = this.add.tileSprite(600, 136, 1200, 258, 'lv1MainMt')
-    player = this.physics.add.sprite(100, 500, 'player', 0)
+    this.street = this.add.tileSprite(600, 529, 1200, 543, 'lv1Street')
+    this.packMt = this.add.tileSprite(600, 129, 1200, 258, 'lv1PackMt')
+    this.mainMt = this.add.tileSprite(600, 136, 1200, 258, 'lv1MainMt')
+    this.player = this.physics.add.sprite(100, 500, 'player', 0)
     
-    
-
-
-
     this.physics.world.setBounds(0, 250, 1200, 430)
     this.anims.create({
       key: 'walk',
@@ -41,56 +42,96 @@ const level1 = {
       repeat: -1
     })
 
-    player.setCollideWorldBounds(true)
-    player.setDepth(1)
-    player.play('walk').setScale(0.3).setSize(400, 120).setOffset(130, 620)
+    this.player.setCollideWorldBounds(true)
+    this.player.setDepth(1)
+    this.player.play('walk').setScale(0.3).setSize(380, 100).setOffset(130, 675)
     // create block group
-    group = this.add.group({ maxSize: 10 })
-    group.setDepth(1)
+    this.group = this.add.group()
+    this.group.setDepth(1)
+    
+    this.cursors = this.input.keyboard.createCursorKeys()
+    
+    this.timer = this.time.addEvent({
+      delay: 1000,
+      callback: this.createBlock,
+      callbackScope: this,
+      loop: true
+    })
 
-    cursors = this.input.keyboard.createCursorKeys()
 
-    this.physics.add.overlap(player, group, () => {
+    this.physics.add.overlap(this.player, this.group, () => {
       isPlaying = false
     })
-  },
-  createBlock (block) {
-    Phaser.Geom.Rectangle.Random(this.physics.world.bounds, block)
-    block.setVelocityX(-200)
-  },
-  update (time, delta) {
-    if (!isPlaying) return
-    if (Phaser.Math.Between(1, 1000) < 20 && group.getChildren().length < 10) {
-      
+  }
+  
+  createBlock () {
+    const rowCount = Phaser.Math.Between(0, 2)
+    for (let i = 0; i < rowCount; i++) {
       let y = Phaser.Math.Between(300, 700)
-      group.add(this.physics.add.sprite(1200, y, ENEMY_LIST[Phaser.Math.Between(0, 1)], 0))
+      let enemy = new Enemy({
+        scene: this,
+        x: 1200,
+        y
+      })
+      this.group.add(enemy)
+      enemy.fire(1200, y)
     }
-    group.getChildren().forEach((enemy) => {
-      enemy.setVelocityX(-200)
+  }
+
+  update (time, delta) {
+    if (!this.isPlaying) {
+      this.physics.pause()
+      this.timer.paused = true
+      this.showGameOverNotice()
+    }
+    this.group.getChildren().forEach((enemy) => {
       if (enemy.x < -100) {
         console.log(enemy + '881')
         enemy.destroy()
       }
     })
-
-
-    packMt.tilePositionX += 4
-    mainMt.tilePositionX += 8
-    street.tilePositionX += 10
-    player.setVelocity(0)
-    if (cursors.left.isDown) {
-      player.setVelocityX(-300)
-    } else if (cursors.right.isDown) {
-      player.setVelocityX(300)
+    this.packMt.tilePositionX += 4
+    this.mainMt.tilePositionX += 8
+    this.street.tilePositionX += 10
+    this.player.setVelocity(0)
+    if (this.cursors.left.isDown) {
+      this.player.setVelocityX(-200)
+    } else if (this.cursors.right.isDown) {
+      this.player.setVelocityX(400)
     }
-
-    if (cursors.up.isDown) {
-      player.setVelocityY(-300)
-    } else if (cursors.down.isDown) {
-      player.setVelocityY(300)
+    if (this.cursors.up.isDown) {
+      this.player.setVelocityY(-300)
+    } else if (this.cursors.down.isDown) {
+      this.player.setVelocityY(300)
     }
 
   }
+}
+
+class Enemy extends Phaser.GameObjects.Image
+{
+    constructor (config)
+    {
+      super(config.scene, config.x,config.y, 'enemy');
+      this.speed = Phaser.Math.GetSpeed(500, 1)
+    }
+
+    fire (x, y)
+    {
+      this.setDepth(1)
+      this.setActive(true)
+      this.setVisible(true)
+    }
+
+    update (time, delta) {
+      this.y -= this.speed * delta;
+
+      if (this.y < -50)
+        {
+            this.setActive(false);
+            this.setVisible(false);
+        }
+    }
 }
 
 
@@ -108,7 +149,7 @@ const config = {
       debug: true
     }
   },
-  scene: [level1]
+  scene: [new Level1]
 }
 
 
