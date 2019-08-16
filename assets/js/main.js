@@ -58,9 +58,8 @@ class Level1 extends Phaser.Scene {
       loop: true
     })
 
-
     this.physics.add.overlap(this.player, this.group, () => {
-      isPlaying = false
+      this.isPlaying = false
     })
   }
   
@@ -71,18 +70,33 @@ class Level1 extends Phaser.Scene {
       let enemy = new Enemy({
         scene: this,
         x: 1200,
-        y
+        y,
+        key: ENEMY_LIST[Phaser.Math.Between(0, 1)]
       })
+      
       this.group.add(enemy)
-      enemy.fire(1200, y)
     }
   }
+  showGameOverNotice () {
+    const graphics = this.add.graphics()
 
+    const dialog = new Phaser.Geom.Rectangle(0, 0, 1200, 800)
+    graphics.fillStyle(0xb72121, 1)
+    graphics.fillRectShape(dialog)
+    window.setTimeout(() => {
+      this.scene.restart()
+      this.timer.paused = false
+      this.isPlaying = true
+      graphics.destroy()
+    }, 5000)
+  }
   update (time, delta) {
     if (!this.isPlaying) {
-      this.physics.pause()
+      this.scene.pause()
       this.timer.paused = true
+      this.group.destroy()
       this.showGameOverNotice()
+      return 
     }
     this.group.getChildren().forEach((enemy) => {
       if (enemy.x < -100) {
@@ -108,29 +122,15 @@ class Level1 extends Phaser.Scene {
   }
 }
 
-class Enemy extends Phaser.GameObjects.Image
+class Enemy extends Phaser.Physics.Arcade.Sprite
 {
     constructor (config)
     {
-      super(config.scene, config.x,config.y, 'enemy');
-      this.speed = Phaser.Math.GetSpeed(500, 1)
-    }
-
-    fire (x, y)
-    {
-      this.setDepth(1)
-      this.setActive(true)
-      this.setVisible(true)
-    }
-
-    update (time, delta) {
-      this.y -= this.speed * delta;
-
-      if (this.y < -50)
-        {
-            this.setActive(false);
-            this.setVisible(false);
-        }
+      super(config.scene, config.x,config.y, config.key)
+      this.speed = config.key === 'tree' ? 200 : Phaser.Math.Between(200, 400)
+      config.scene.add.existing(this)
+      config.scene.physics.add.existing(this)
+      this.setVelocityX(-this.speed)
     }
 }
 
